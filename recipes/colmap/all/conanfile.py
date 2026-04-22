@@ -29,6 +29,7 @@ class ColmapConan(ConanFile):
         "lsd": [True, False],
         "openmp": [True, False],
         "tools": [True, False],
+        "onnx": [True, False],
     }
     default_options = {
         "fPIC": True,
@@ -40,6 +41,7 @@ class ColmapConan(ConanFile):
         "lsd": True,  # AGPL-licensed
         "openmp": True,
         "tools": False,
+        "onnx": False,
     }
     implements = ["auto_shared_fpic"]
 
@@ -73,15 +75,20 @@ class ColmapConan(ConanFile):
         return "openssl"
 
     def requirements(self):
-        self.requires("boost/[^1.71.0 <1.88]", transitive_headers=True, transitive_libs=True)
+        self.requires("boost/[^1.71.0]", transitive_headers=True, transitive_libs=True)
         self.requires("ceres-solver/[^2.2.0, include_prerelease]", transitive_headers=True, transitive_libs=True)
         self.requires("eigen/[>=3.3 <6]", transitive_headers=True, transitive_libs=True)
         self.requires("poselib/[^2.0.5]")
         self.requires("faiss/[^1.12.0]")
-        self.requires("freeimage/3.18.0")
+        if Version(self.version) >= "4.0.0":
+            self.requires("openimageio/[>=3.0.8.0]")
+        else:
+            self.requires("freeimage/3.18.0")
         self.requires("glog/0.6.0", transitive_headers=True, transitive_libs=True)
         self.requires("metis/5.2.1")
         self.requires("sqlite3/[>=3.45.0 <4]", transitive_headers=True, transitive_libs=True)
+        if Version(self.version) >= "4.0.0":
+            self.requires("suitesparse-cholmod/[^5.3.0]")
         if self.options.download:
             self.requires("libcurl/[>=7.78 <9]")
             if self._crypto_package == "openssl":
@@ -106,6 +113,8 @@ class ColmapConan(ConanFile):
 
     def validate(self):
         check_min_cppstd(self, 17)
+        if Version(self.version) >= "4.0.0" and not self.dependencies["ceres-solver"].options.use_suitesparse:
+            raise ConanInvalidConfiguration("'-o ceres-solver/*:use_suitesparse=True' is required")
 
     def build_requirements(self):
         self.tool_requires("cmake/[>=3.27 <5]")
@@ -120,6 +129,8 @@ class ColmapConan(ConanFile):
         replace_in_file(self, "CMakeLists.txt", "set(CMAKE_CUDA_STANDARD 17)", "")
         # Eigen v5 compatibility
         replace_in_file(self, "src/colmap/util/misc.h", "#include <algorithm>", "#include <algorithm>\n#include <cassert>")
+        if Version(self.version) >= "4.0.0":
+            replace_in_file(self, "src/colmap/optim/CMakeLists.txt", "CHOLMOD::CHOLMOD", "SuiteSparse::CHOLMOD")
 
     def generate(self):
         tc = CMakeToolchain(self)
@@ -136,6 +147,9 @@ class ColmapConan(ConanFile):
         tc.cache_variables["TESTS_ENABLED"] = False
         tc.cache_variables["FETCH_FAISS"] = False
         tc.cache_variables["FETCH_POSELIB"] = False
+        if Version(self.version) >= "4.0.0":
+            tc.cache_variables["FETCH_ONNX"] = False
+            tc.cache_variables["ONNX_ENABLED"] = self.options.onnx
         tc.cache_variables["CMAKE_POLICY_DEFAULT_CMP0077"] = "NEW"
         if self.options.cuda and self.settings.os == "Linux" and not cross_building(self):
             # Workaround for -I/usr/include from OpenGL messing up the NVCC include dir search order,
@@ -223,13 +237,19 @@ class ColmapConan(ConanFile):
         image = _add_component("image", requires=["util", "sensor", "scene"])
         _add_component("math", requires=["util", "metis::metis", "boost::graph"])
         mvs = _add_component("mvs", requires=["util", "math", "scene", "sensor", "image", "poisson_recon"])
-        _add_component("optim", requires=["math"])
+        optim = _add_component("optim", requires=["math"])
         retrieval = _add_component("retrieval", requires=["math", "estimators", "optim", "faiss::faiss_"])
         _add_component("scene", requires=["util", "sensor", "feature_types", "geometry"])
-        _add_component("sensor", requires=["util", "geometry", "vlfeat", "freeimage::FreeImage", "ceres-solver::ceres"])
+        sensor = _add_component("sensor", requires=["util", "geometry", "vlfeat", "ceres-solver::ceres"])
         _add_component("sfm", requires=["util", "geometry", "image", "scene", "estimators"])
         poisson_recon = _add_component("poisson_recon", requires=[])
         vlfeat = _add_component("vlfeat", requires=[])
+
+        if Version(self.version) >= "4.0.0":
+            optim.requires.append("suitesparse-cholmod::suitesparse-cholmod")
+            sensor.requires.append("openimageio::openimageio")
+        else:
+            sensor.requires.append("freeimage::FreeImage")
 
         if self.options.lsd:
             _add_component("lsd", requires=[])
