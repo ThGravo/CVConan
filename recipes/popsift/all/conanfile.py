@@ -59,6 +59,7 @@ class PopSiftConan(ConanFile):
         tc.cache_variables["PopSift_BUILD_DOCS"] = False
         tc.cache_variables["PopSift_USE_TEST_CMD"] = False
         tc.cache_variables["PopSift_USE_POSITION_INDEPENDENT_CODE"] = self.options.get_safe("fPIC", True)
+        tc.cache_variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = str(self.settings.build_type)
         tc.generate()
 
         deps = CMakeDeps(self)
