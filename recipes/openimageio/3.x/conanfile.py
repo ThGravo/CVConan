@@ -180,6 +180,8 @@ class OpenImageIOConan(ConanFile):
         tc.variables["OIIO_INTERNALIZE_FMT"] = False
         tc.variables["OIIO_USE_CUDA"] = self.options.with_cuda
 
+        tc.variables["USE_PYTHON"] = False
+
         tc.variables["USE_LIBHEIF"] = self.options.with_libheif
         tc.variables["USE_PTEX"] = self.options.with_ptex
 
