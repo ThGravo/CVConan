@@ -1,9 +1,16 @@
 sources:
+  "1.2.0":
+    url: "https://github.com/colmap/glomap/archive/5c0455e2bb4432b8266b380218605124cff0cef3.tar.gz"
+    sha256: "52b40cc1f8293414189814372edf46bc27816c03357e164eb5fca79c835f5f10"
   # https://github.com/colmap/glomap/pull/201 version
   "1.1.0-git.20250828":
     url: "https://github.com/colmap/glomap/archive/5c0455e2bb4432b8266b380218605124cff0cef3.tar.gz"
     sha256: "88decc9478082fd7e12d9fa680a8c8d74af2221ac4497647557678d7b517d554"
 patches:
+  "1.2.0":
+    - patch_file: "patches/cmake-fixes.patch"
+      patch_description: "Add missing install() commands to CMakeLists.txt"
+      patch_type: "conan"
   "1.1.0-git.20250828":
     - patch_file: "patches/cmake-fixes.patch"
       patch_description: "Add missing install() commands to CMakeLists.txt"
