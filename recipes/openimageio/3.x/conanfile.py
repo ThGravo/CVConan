@@ -232,6 +232,8 @@ class OpenImageIOConan(ConanFile):
         tc.cache_variables["CMAKE_REQUIRE_FIND_PACKAGE_WebP"] = self.options.with_libwebp
         tc.cache_variables["CMAKE_REQUIRE_FIND_PACKAGE_JXL"] = self.options.with_libjxl
 
+        tc.variables["USE_PYTHON"] = False
+
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_libjpeg-turbo"] = "libjpeg-turbo" not in self.dependencies
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_R3DSDK"] = True
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_Nuke"] = True
