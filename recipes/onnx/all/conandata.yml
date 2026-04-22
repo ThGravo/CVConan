@@ -1,4 +1,7 @@
 sources:
+  "1.20.1":
+    url: "https://github.com/onnx/onnx/archive/refs/tags/v1.20.1.tar.gz"
+    sha256: "9bcd6473c689b1ac3aeba8df572891756e01c1a151ae788df5cbc7a4499e5db5"
   "1.18.0":
     url: "https://github.com/onnx/onnx/archive/v1.17.0.tar.gz"
     sha256: "8d5e983c36037003615e5a02d36b18fc286541bf52de1a78f6cf9f32005a820e"
@@ -17,3 +20,6 @@ sources:
   "1.13.1":
     url: "https://github.com/onnx/onnx/archive/refs/tags/v1.13.1.tar.gz"
     sha256: "090d3e10ec662a98a2a72f1bf053f793efc645824f0d4b779e0ce47468a0890e"
+patches:
+  "1.20.1":
+    - patch_file: "patches/cmake-absl-proto-targets.patch"
