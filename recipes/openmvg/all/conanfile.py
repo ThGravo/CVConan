@@ -79,7 +79,7 @@ class OpenmvgConan(ConanFile):
     def requirements(self):
         self.requires("cereal/[^1.3.2]", transitive_headers=True)
         if Version(self.version) >= "2.1":
-            self.requires("ceres-solver/[^2.2.0]")
+            self.requires("ceres-solver/2.3.0-git.20260401")
             self.requires("spectra/[^1.0]")
         else:
             self.requires("ceres-solver/2.1.0")
