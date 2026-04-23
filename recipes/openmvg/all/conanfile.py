@@ -210,6 +210,19 @@ class OpenmvgConan(ConanFile):
         copy(self, "LICENSE", self.source_folder, os.path.join(self.package_folder, "licenses"))
         cmake = CMake(self)
         cmake.install()
+        # nonFree CMakeLists is intentionally blanked in source(), so install these headers explicitly.
+        copy(
+            self,
+            "SIFT_describer.hpp",
+            os.path.join(self.source_folder, "src", "nonFree", "sift"),
+            os.path.join(self.package_folder, "include", "openMVG_dependencies", "nonFree", "sift"),
+        )
+        copy(
+            self,
+            "SIFT_describer_io.hpp",
+            os.path.join(self.source_folder, "src", "nonFree", "sift"),
+            os.path.join(self.package_folder, "include", "openMVG_dependencies", "nonFree", "sift"),
+        )
         for dll_file in glob.glob(os.path.join(self.package_folder, "lib", "*.dll")):
             rename(self, dll_file, os.path.join(self.package_folder, "bin", os.path.basename(dll_file)))
         rm(self, "*.cmake", os.path.join(self.package_folder, "lib"))
