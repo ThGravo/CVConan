@@ -162,11 +162,6 @@ class GdalConan(ConanFile):
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
-        if Version(self.version) < "3.7":
-            # Latest versions of Arrow are no longer compatible with GDAL 3.5
-            self.options.with_arrow = False
-        if Version(self.version) < "3.8":
-            del self.options.with_libaec
 
     def configure(self):
         if self.options.shared:
@@ -183,7 +178,7 @@ class GdalConan(ConanFile):
     def requirements(self):
         self.requires("json-c/[>=0.17 <1]")
         self.requires("libgeotiff/[^1.7.1]")
-        self.requires("libtiff/[>=4.5 <5]")
+        self.requires("libtiff/[>=4.6.0 <5]")
         self.requires("proj/[^9.3.1]")
         # Used in a public header here:
         # https://github.com/OSGeo/gdal/blob/v3.7.1/port/cpl_minizip_ioapi.h#L26
@@ -191,7 +186,7 @@ class GdalConan(ConanFile):
         if self.options.with_armadillo:
             self.requires("armadillo/[*]")
         if self.options.with_arrow:
-            self.requires("arrow/18.1.0")
+            self.requires("arrow/[>=14.0.2 <20]")
         if self.options.with_basisu:
             self.requires("libbasisu/[^1.15.0]")
         if self.options.with_blosc:
@@ -224,7 +219,7 @@ class GdalConan(ConanFile):
         if self.options.with_hdf4:
             self.requires("hdf4/[^4.2.16-2]")
         if self.options.with_hdf5:
-            self.requires("hdf5/[^1.8]")
+            self.requires("hdf5/[>=1.14.3]")
         if self.options.with_heif:
             self.requires("libheif/[^1.16.2]")
         if self.options.with_jpeg:
@@ -247,11 +242,11 @@ class GdalConan(ConanFile):
         if self.options.with_libkml:
             self.requires("libkml/1.3.0")
         if self.options.with_lzma:
-            self.requires("xz_utils/[^5.4.5]")
+            self.requires("xz_utils/[>=5.4.5 <6]")
         if self.options.with_lz4:
             self.requires("lz4/[^1.9.4]")
         if self.options.with_mongocxx:
-            self.requires("mongo-cxx-driver/[^3.8.1]")
+            self.requires("mongo-cxx-driver/[>=3.8.1 <4]")
         if self.options.with_mysql == "libmysqlclient":
             self.requires("libmysqlclient/[^8.1.0]")
         elif self.options.with_mysql == "mariadb-connector-c":
@@ -276,7 +271,7 @@ class GdalConan(ConanFile):
         if self.options.with_pg:
             self.requires("libpq/[>=15]")
         if self.options.with_png:
-            self.requires("libpng/[~1.6]")
+            self.requires("libpng/[>=1.6 <2]")
         if self.options.with_podofo:
             self.requires("podofo/0.9.7")
         if self.options.with_poppler:
@@ -296,7 +291,7 @@ class GdalConan(ConanFile):
         if self.options.with_xerces:
             self.requires("xerces-c/[^3.2.5]")
         if self.options.with_xml2:
-            self.requires("libxml2/[^2.12.5]")
+            self.requires("libxml2/[>=2.12.5 <3]")
         if self.options.with_zstd:
             self.requires("zstd/[>=1.5 <1.6]")
         # Use of external shapelib is not recommended and is currently broken.
@@ -324,6 +319,9 @@ class GdalConan(ConanFile):
 
         if self.options.with_sqlite3 and not self.dependencies["sqlite3"].options.enable_column_metadata:
             raise ConanInvalidConfiguration("gdql requires sqlite3:enable_column_metadata=True")
+
+        if self.options.with_arrow and Version(self.version) >= "3.10.0" and not self.dependencies["arrow"].options.filesystem_layer:
+            raise ConanInvalidConfiguration("Gdal[>=3.10.0] requires -o arrow/*:filesystem_layer=True")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
@@ -446,7 +444,7 @@ class GdalConan(ConanFile):
 
         # General workaround for try_compile() tests in the project
         # https://github.com/conan-io/conan/issues/12180
-        tc.cache_variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = str(self.settings.build_type)
+        tc.variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = self.settings.build_type
         # https://github.com/OSGeo/gdal/blob/v3.8.0/cmake/helpers/CheckDependentLibraries.cmake#L419-L450
         tc.cache_variables["HAVE_JPEGTURBO_DUAL_MODE_8_12"] = (
                 self.options.with_jpeg and
@@ -643,7 +641,7 @@ class GdalConan(ConanFile):
     def build(self):
         self._patch_sources()
         cmake = CMake(self)
-        cmake.configure(build_script_folder="..")
+        cmake.configure(build_script_folder=self.source_path.parent)
         cmake.build()
 
     def package(self):
