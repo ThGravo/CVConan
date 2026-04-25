@@ -235,6 +235,7 @@ class LibtorchConan(ConanFile):
         self.requires("onnx/[^1.13]", transitive_headers=True, transitive_libs=True)
         self.requires("protobuf/[>=3.21.12]")
         self.requires("pocketfft/[*]")
+        self.requires("fp16/[*]")
         if self._require_sleef:
             self.requires("sleef/[^3.6.1]", transitive_headers=True, transitive_libs=True)
         if self._require_flatbuffers:
@@ -248,12 +249,11 @@ class LibtorchConan(ConanFile):
         if self.options.with_gflags:
             self.requires("gflags/[^2.2.2]", transitive_headers=True, transitive_libs=True)
         if self.options.with_glog:
-            self.requires("glog/[~0.6]", transitive_headers=True, transitive_libs=True)
+            self.requires("glog/[>=0.6]", transitive_headers=True, transitive_libs=True)
         if self.options.with_xnnpack:
             self.requires("xnnpack/0.0+git.20241203", transitive_headers=True, transitive_libs=True)
         if self.options.build_qnnpack:
             # PyTorch's QNNPACK has significant modifications and can't be unvendored
-            self.requires("fp16/[*]")
             self.requires("fxdiv/[*]")
             self.requires("psimd/[*]")
             self.requires("pthreadpool/[*]")
@@ -575,6 +575,7 @@ class LibtorchConan(ConanFile):
             "onnx::onnx",
             "pocketfft::pocketfft",
             "protobuf::protobuf",
+            "fp16::fp16",
         ]
         if self._require_sleef:
             torch_cpu.requires.append("sleef::sleef")
