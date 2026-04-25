@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
@@ -133,12 +134,15 @@ class LibtorchConan(ConanFile):
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
+            self.options.rm_safe("with_kleidiai")
         if not is_apple_os(self):
             del self.options.with_coreml
             del self.options.with_metal
             del self.options.with_mps
         if self.settings.os != "Linux":
             del self.options.with_numa
+            del self.options.with_nccl
+            del self.options.with_cufile
         if self.settings.os != "Android":
             self.options.rm_safe("with_nnapi")
             self.options.rm_safe("with_snpe")
@@ -296,11 +300,11 @@ class LibtorchConan(ConanFile):
                 self.requires("cudnn-frontend/[^1.13]", transitive_headers=True, transitive_libs=True)
             if self.options.with_cudss:
                 self.cuda.requires("cudss")
-            if self.options.with_cufile:
+            if self.options.get_safe("with_cufile"):
                 self.cuda.requires("cufile")
             if self.options.with_nvrtc:
                 self.cuda.requires("nvrtc", transitive_headers=True, transitive_libs=True)
-            if self.options.with_nccl:
+            if self.options.get_safe("with_nccl"):
                 self.requires("nccl/[^2]", transitive_headers=True, transitive_libs=True)
             if self.options.get_safe("with_nvshmem"):
                 self.requires("nvshmem/[^3]")
@@ -369,9 +373,9 @@ class LibtorchConan(ConanFile):
             tc.cache_variables["USE_CUDNN"] = self.options.with_cudnn
             tc.cache_variables["USE_CUSPARSELT"] = self.options.with_cusparselt
             tc.cache_variables["USE_CUDSS"] = self.options.with_cudss
-            tc.cache_variables["USE_CUFILE"] = self.options.with_cufile
+            tc.cache_variables["USE_CUFILE"] = self.options.get_safe("with_cufile")
             tc.cache_variables["USE_NVRTC"] = self.options.with_nvrtc
-            tc.cache_variables["USE_NCCL"] = self.options.with_nccl
+            tc.cache_variables["USE_NCCL"] = self.options.get_safe("with_nccl")
             tc.cache_variables["USE_NVSHMEM"] = self.options.get_safe("with_nvshmem", False)
         tc.cache_variables["USE_FBGEMM"] = self.options.with_fbgemm
         tc.cache_variables["USE_KINETO"] = True  # can't really be disabled
@@ -637,7 +641,7 @@ class LibtorchConan(ConanFile):
                 torch_cuda.requires.append("cusparselt::cusparselt")
             if self.options.with_cudss:
                 torch_cuda.requires.append("cudss::cudss")
-            if self.options.with_cufile:
+            if self.options.get_safe("with_cufile"):
                 torch_cuda.requires.append("cufile::cufile")
             if self.options.with_nvrtc:
                 torch_cuda.requires.append("nvrtc::nvrtc")
