@@ -427,6 +427,7 @@ class LibtorchConan(ConanFile):
         tc.cache_variables["USE_NNPACK"] = self.options.with_nnpack
         tc.cache_variables["USE_PYTORCH_QNNPACK"] = self.options.build_qnnpack
         tc.cache_variables["USE_XNNPACK"] = self.options.with_xnnpack
+        tc.cache_variables["USE_SYSTEM_XNNPACK"] = self.options.with_xnnpack
         tc.cache_variables["USE_ITT"] = self.options.with_itt
         tc.cache_variables["USE_MKLDNN"] = self.options.with_onednn
         tc.cache_variables["USE_MKLDNN_ACL"] = self.options.get_safe("with_acl", False)
@@ -447,7 +448,22 @@ class LibtorchConan(ConanFile):
         tc.cache_variables["USE_KLEIDIAI"] = self.options.get_safe("with_kleidiai", False)
         tc.cache_variables["USE_MIMALLOC"] = self.options.with_mimalloc
         tc.cache_variables["USE_LLVM"] = False
-        tc.cache_variables["USE_SYSTEM_LIBS"] = True
+        # tc.cache_variables["USE_SYSTEM_LIBS"] = True
+        tc.cache_variables["USE_SYSTEM_CPUINFO"] = True
+        tc.cache_variables["USE_SYSTEM_SLEEF"] = self._require_sleef
+        tc.cache_variables["USE_SYSTEM_GLOO"] = self.options.get_safe("with_gloo")
+        tc.cache_variables["BUILD_CUSTOM_PROTOBUF"] = False
+        tc.cache_variables["USE_SYSTEM_EIGEN_INSTALL"] = True
+        tc.cache_variables["USE_SYSTEM_FP16"] = True
+        tc.cache_variables["USE_SYSTEM_PTHREADPOOL"] = self.options.build_qnnpack
+        tc.cache_variables["USE_SYSTEM_PSIMD"] = self.options.build_qnnpack
+        tc.cache_variables["USE_SYSTEM_FXDIV"] = self.options.build_qnnpack
+        tc.cache_variables["USE_SYSTEM_BENCHMARK"] = False
+        tc.cache_variables["USE_SYSTEM_ONNX"] = True
+        tc.cache_variables["USE_SYSTEM_PYBIND11"] = False
+        tc.cache_variables["USE_SYSTEM_NCCL"] = self.options.get_safe("with_nccl")
+        tc.cache_variables["USE_SYSTEM_NVTX"] = self.options.with_cuda
+
         tc.cache_variables["CONAN_LIBTORCH_USE_FLATBUFFERS"] = self._require_flatbuffers
         tc.cache_variables["CONAN_LIBTORCH_USE_SLEEF"] = self._require_sleef
         tc.cache_variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = str(self.settings.build_type)
