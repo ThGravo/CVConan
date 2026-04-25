@@ -334,18 +334,40 @@ class LibtorchConan(ConanFile):
     def source(self):
         get(self, **self.conan_data["sources"][self.version]["pytorch"], strip_root=True)
         apply_conandata_patches(self)
-        rmdir(self, "third_party")
+        # Keep vendored pieces still required by upstream build logic.
+        third_party_allowed = {"miniz-3.0.2", "kineto", "cudnn_frontend", "cutlass"}
+        for folder in Path(self.source_folder).joinpath("third_party").iterdir():
+            if folder.is_dir() and folder.name not in third_party_allowed:
+                rmdir(self, folder)
         get(self, **self.conan_data["sources"][self.version]["flash-attention"], strip_root=True,
             destination="third_party/flash-attention")
         # Recreate some for add_subdirectory() to work
         for pkg in ["fmt", "FXdiv", "kineto/libkineto", "mimalloc", "tensorpipe"]:
             save(self, os.path.join("third_party", pkg, "CMakeLists.txt"), "")
-        # Use FindOpenMP from Conan or CMake
-        rm(self, "FindOpenMP.cmake", "cmake/modules")
+        # Keep PyTorch's FindOpenMP.cmake: newer sources include it directly from cmake/Modules.
+        # Conan drives this option; upstream unconditionally flips it ON on Windows.
+        # This line changed across PyTorch versions; do not fail if it is not present.
+        replace_in_file(self, "CMakeLists.txt", "  set(USE_MIMALLOC ON)\n", "", strict=False)
         # No need for this broken workaround anymore since glog v0.6.0
         replace_in_file(self, "c10/util/Logging.cpp",
                         "google::glog_internal_namespace_::IsGoogleLoggingInitialized()",
                         "google::IsGoogleLoggingInitialized()")
+        # glog >=0.7 can make this std::min call ambiguous on MSVC due to enum/int type mismatch.
+        replace_in_file(
+            self,
+            "c10/util/Logging.cpp",
+            "FLAGS_minloglevel = std::min(FLAGS_minloglevel, google::GLOG_INFO);",
+            "FLAGS_minloglevel = std::min(FLAGS_minloglevel, static_cast<int>(google::GLOG_INFO));",
+            strict=False,
+        )
+        # Backtrace.cpp pulls in cxxabi/execinfo when SUPPORTS_BACKTRACE=1; skip Backtrace on MSVC.
+        replace_in_file(
+            self,
+            "c10/CMakeLists.txt",
+            "find_package(Backtrace)",
+            "if(NOT MSVC)\n  find_package(Backtrace)\nendif()",
+            strict=False,
+        )
         # Don't need to explicitly link against fxdiv
         replace_in_file(self, "caffe2/CMakeLists.txt", "TARGET_LINK_LIBRARIES(torch_cpu PRIVATE fxdiv)", "")
 
@@ -377,6 +399,9 @@ class LibtorchConan(ConanFile):
             tc.cache_variables["USE_NVRTC"] = self.options.with_nvrtc
             tc.cache_variables["USE_NCCL"] = self.options.get_safe("with_nccl")
             tc.cache_variables["USE_NVSHMEM"] = self.options.get_safe("with_nvshmem", False)
+            #if is_msvc(self):
+        tc.cache_variables["CMAKE_POLICY_DEFAULT_CMP0146"] = "OLD"
+        tc.cache_variables["CMAKE_POLICY_DEFAULT_CMP0147"] = "OLD"
         tc.cache_variables["USE_FBGEMM"] = self.options.with_fbgemm
         tc.cache_variables["USE_KINETO"] = True  # can't really be disabled
         tc.cache_variables["USE_FAKELOWP"] = False  # not actually used anywhere
@@ -437,14 +462,16 @@ class LibtorchConan(ConanFile):
 
         deps = CMakeDeps(self)
         deps.set_property("concurrentqueue", "cmake_target_name", "moodycamel")
+        deps.set_property("cpp-httplib", "cmake_target_name", "httplib")
         deps.set_property("cpuinfo", "cmake_target_name", "cpuinfo")
         deps.set_property("cudss", "cmake_file_name", "CUDSS")
-        deps.set_property("cudss", "cmake_target_name", "torch::cudss")
+        deps.set_property("cudss", "cmake_target_name", "cudss::cudss")
         deps.set_property("cusparselt", "cmake_file_name", "CUSPARSELT")
         deps.set_property("flatbuffers", "cmake_target_name", "flatbuffers::flatbuffers")
         deps.set_property("fmt", "cmake_target_name", "fmt::fmt-header-only")
         deps.set_property("foxi", "cmake_target_name", "foxi_loader")
-        deps.set_property("fp16", "cmake_target_aliases", ["fp16"])
+        # deps.set_property("fp16", "cmake_target_name", "fp16")
+        deps.set_property("fxdiv", "cmake_target_name", "fxdiv")
         deps.set_property("gflags", "cmake_target_name", "gflags")
         deps.set_property("gloo", "cmake_file_name", "Gloo")
         deps.set_property("httplib", "cmake_target_name", "httplib")
@@ -455,6 +482,7 @@ class LibtorchConan(ConanFile):
         deps.set_property("nccl", "cmake_target_name", "__caffe2_nccl")
         deps.set_property("nlohmann_json", "cmake_target_name", "nlohmann")
         deps.set_property("nnpack", "cmake_target_name", "nnpack")
+        deps.set_property("onnx", "cmake_target_name", "ONNX::onnx")
         deps.set_property("psimd", "cmake_target_name", "psimd")
         deps.set_property("tensorpipe", "cmake_target_name", "tensorpipe")
         deps.generate()
