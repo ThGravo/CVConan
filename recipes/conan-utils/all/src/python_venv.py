@@ -1,10 +1,13 @@
 from pathlib import Path
+import platform
 
 from conan import ConanFile
 from conan.tools.env import Environment, VirtualBuildEnv
 
 
 def _python_executable(conanfile: ConanFile):
+    if platform.system() == "Windows":
+        return conanfile.conf.get("user.cpython:python", default="python", check_type=str)
     return conanfile.conf.get("user.cpython:python", default="python3", check_type=str)
 
 
@@ -37,13 +40,19 @@ class PythonVenv:
 
         env = Environment()
         env.define_path("VIRTUAL_ENV", str(destination))
-        env.prepend_path("PATH", str(destination / "bin"))
+        if platform.system() == "Windows":
+            env.prepend_path("PATH", str(destination / "Scripts"))
+        else:
+            env.prepend_path("PATH", str(destination / "bin"))
         # Setting PYTHONPATH is redundant to VIRTUAL_ENV, but it helps in some edge cases
         # where the original Python interpreter gets picked up instead of the venv one.
         env.prepend_path("PYTHONPATH", str(next(destination.rglob("site-packages"))))
         env.vars(self.conanfile, scope=scope).save_script("python_venv")
 
-        new_exe_path = str(Path(destination, "bin", Path(executable).name))
+        if platform.system() == "Windows":
+            new_exe_path = str(Path(destination, "Scripts", Path(executable).name))
+        else:
+            new_exe_path = str(Path(destination, "bin", Path(executable).name))
         self.conanfile.conf.define("user.cpython:python", new_exe_path)
 
 
